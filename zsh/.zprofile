@@ -22,3 +22,4 @@ export PATH=~/.local/bin:"$PATH"
 
 alias rg="rg --smart-case --heading --line-number --color=always --hidden"
 alias tat="tmux attach -t "
+alias vim="neovim"
