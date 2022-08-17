@@ -100,3 +100,12 @@ fi
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
+# Where should I put you?
+bindkey -s ^f "tmux-sessionizer\n"
+
+export PATH=~/.local/.npm-global/bin:"$PATH"
+export PATH=~/.local/bin:"$PATH"
+
+alias rg="rg --smart-case --heading --line-number --color=always --hidden"
+alias tat="tmux attach -t "
+alias vim="neovim"
