@@ -1,6 +1,7 @@
 return require("packer").startup(function()
 	use("wbthomason/packer.nvim")
 
+	use("vim-scripts/YankRing.vim")
 	use("github/copilot.vim")
 	use("neovim/nvim-lspconfig")
 	use("AndrewRadev/ember_tools.vim")
@@ -11,11 +12,19 @@ return require("packer").startup(function()
 	use("dense-analysis/ale") -- linting
 	use("itchyny/lightline.vim")
 	use("jgdavey/tslime.vim") -- send things to tmux
+	use {
+	  'nvim-telescope/telescope.nvim',
+	  requires = { {'nvim-lua/plenary.nvim'} }
+	}
+	use {
+	  'nvim-telescope/telescope-fzf-native.nvim',
+       run = 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build'
+    }
 	use("junegunn/fzf.vim") -- vim keybindings
 	use("junegunn/fzf") -- vim keybindings
 	use("junegunn/vim-easy-align") -- align tables in markdown
 	use("morhetz/gruvbox") -- Different color scheme
-	-- use("scrooloose/nerdtree") -- file system explorer
+	use("scrooloose/nerdtree") -- file system explorer
 	use("sheerun/vim-polyglot") -- language packs
 	use("thoughtbot/vim-rspec") -- rspec helper
 	use("tpope/vim-abolish")
@@ -33,5 +42,9 @@ return require("packer").startup(function()
 	use("tpope/vim-surround")
 	use("tpope/vim-unimpaired") -- Pairs of handy bracket mappings
 	use("vim-ruby/vim-ruby")
+    use("nvim-treesitter/nvim-treesitter", {
+        run = ":TSUpdate"
+    })
+    use("romgrk/nvim-treesitter-context")
 end)
 

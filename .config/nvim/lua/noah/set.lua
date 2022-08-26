@@ -24,7 +24,6 @@ vim.opt.incsearch = true
 
 vim.opt.termguicolors = true
 
-vim.opt.scrolloff = 8
 vim.opt.signcolumn = "yes"
 vim.opt.isfname:append("@-@")
 
@@ -36,12 +35,18 @@ vim.opt.colorcolumn = "120"
 vim.g.mapleader = " "
 vim.g.maplocalleader = "\\"
 
+vim.opt.ignorecase = true
 vim.opt.smartcase = true
 
 vim.opt.list = true
 vim.opt.listchars = {
-  eol = '⤶',
+  eol = ' ',
   trail = '·',
   extends = '◀',
   precedes = '▶',
+  tab = '  ',
 }
+
+vim.g.NERDTreeMinimalUI = 1
+vim.g.NERDTreeDirArrows = 1
+vim.g.NERDTreeWinSize = 30
