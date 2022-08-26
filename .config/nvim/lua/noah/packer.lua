@@ -4,6 +4,7 @@ return require("packer").startup(function()
 	use("vim-scripts/YankRing.vim")
 	use("github/copilot.vim")
 	use("neovim/nvim-lspconfig")
+
 	use("AndrewRadev/ember_tools.vim")
 	use("AndrewRadev/splitjoin.vim")
 	use("Raimondi/delimitMate")
@@ -25,7 +26,7 @@ return require("packer").startup(function()
 	use("junegunn/vim-easy-align") -- align tables in markdown
 	use("morhetz/gruvbox") -- Different color scheme
 	use("scrooloose/nerdtree") -- file system explorer
-	use("sheerun/vim-polyglot") -- language packs
+	-- use("sheerun/vim-polyglot") -- language packs
 	use("thoughtbot/vim-rspec") -- rspec helper
 	use("tpope/vim-abolish")
 	use("tpope/vim-bundler")
@@ -46,5 +47,6 @@ return require("packer").startup(function()
         run = ":TSUpdate"
     })
     use("romgrk/nvim-treesitter-context")
+	use("fatih/vim-go")
 end)
 

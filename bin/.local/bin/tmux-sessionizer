@@ -3,7 +3,7 @@
 if [[ $# -eq 1 ]]; then
     selected=$1
 else
-    selected=$(find ~/dev/simplepractice/web/simplepractice.git ~/dev/simplepractice ~/dev/workflow ~/dev/open-source ~ -mindepth 1 -maxdepth 1 -type d -not -path '**/hooks' -not -path '**/refs' -not -path '**/objects' -not -path '**/logs' -not -path '**/worktrees' | fzf)
+    selected=$(find ~/dev/ehr ~/dev ~/tutorials ~/ -mindepth 1 -maxdepth 1 -type d | fzf)
 fi
 
 if [[ -z $selected ]]; then

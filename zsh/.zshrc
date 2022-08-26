@@ -107,5 +107,10 @@ export PATH=~/.local/.npm-global/bin:"$PATH"
 export PATH=~/.local/bin:"$PATH"
 
 alias rg="rg --smart-case --heading --line-number --color=always --hidden"
+alias be="bundle exec"
 alias tat="tmux attach -t "
 alias vim="neovim"
+
+export PATH="$HOME/.amplify/bin:$PATH"
+export PATH="$HOME/.rbenv/bin:$PATH"
+eval "$(rbenv init - zsh)"
