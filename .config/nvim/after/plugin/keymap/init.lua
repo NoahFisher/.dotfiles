@@ -8,6 +8,7 @@ local autocmd = vim.api.nvim_create_autocmd
 
 nmap("sj", ":SplitjoinSplit<CR>")
 nmap("sk", ":SplitjoinJoin<CR>")
+nmap("<localleader>jt", "<Esc>:%!python3 -m json.tool<CR>")
 
 nnoremap("<leader>pv", ":Ex<CR>")
 
