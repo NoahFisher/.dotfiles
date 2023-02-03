@@ -114,3 +114,6 @@ alias vim="neovim"
 export PATH="$HOME/.amplify/bin:$PATH"
 export PATH="$HOME/.rbenv/bin:$PATH"
 eval "$(rbenv init - zsh)"
+
+export PIVOTAL_PROJECT_ID="2554764"
+export PIVOTAL_TOKEN="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
