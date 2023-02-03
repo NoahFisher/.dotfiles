@@ -49,3 +49,10 @@ vim.opt.listchars = {
   precedes = ' ',
   tab = '  ',
 }
+
+vim.g.NERDTreeMinimalUI = 1
+vim.g.NERDTreeDirArrows = 1
+vim.g.NERDTreeWinSize = 30
+
+vim.g.node_host_prog = '/Users/noah/.nvm/versions/node/v16.15.1/bin/node'
+vim.g.copilot_node_command = '/Users/noah/.nvm/versions/node/v16.15.1/bin/node'
