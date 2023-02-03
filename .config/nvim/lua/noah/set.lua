@@ -49,7 +49,3 @@ vim.opt.listchars = {
   precedes = ' ',
   tab = '  ',
 }
-
-vim.g.NERDTreeMinimalUI = 1
-vim.g.NERDTreeDirArrows = 1
-vim.g.NERDTreeWinSize = 30
