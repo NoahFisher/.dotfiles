@@ -1,8 +1,9 @@
 return require("packer").startup(function()
   use("wbthomason/packer.nvim")
 
-  use("vim-scripts/YankRing.vim")
   use("github/copilot.vim")
+
+  use("vim-scripts/YankRing.vim")
 
   use {
     'VonHeikemen/lsp-zero.nvim',
@@ -27,7 +28,7 @@ return require("packer").startup(function()
   }
 
   use("AndrewRadev/splitjoin.vim")
-  -- use("AndrewRadev/ember_tools.vim")
+  use("AndrewRadev/ember_tools.vim")
   -- use("Raimondi/delimitMate")
   use("austintaylor/vim-indentobject")
   use("christoomey/vim-tmux-navigator") -- Seamless navigation between tmux panes and vim splits
@@ -38,10 +39,10 @@ return require("packer").startup(function()
     'nvim-telescope/telescope.nvim',
     requires = { {'nvim-lua/plenary.nvim'} }
   }
-  use {
-    'nvim-telescope/telescope-fzf-native.nvim',
-    run = 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build'
-  }
+  -- use {
+  --   'nvim-telescope/telescope-fzf-native.nvim',
+  --   run = 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build'
+  -- }
   -- use("junegunn/fzf.vim") -- vim keybindings
   -- use("junegunn/fzf") -- vim keybindings
   -- use("junegunn/vim-easy-align") -- align tables in markdown
@@ -68,4 +69,3 @@ return require("packer").startup(function()
   use("fatih/vim-go")
   use('theprimeagen/harpoon')
 end)
-

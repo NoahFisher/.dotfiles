@@ -2,21 +2,20 @@ local lsp = require('lsp-zero')
 lsp.preset('recommended')
 
 lsp.ensure_installed({
-  'tsserver',
-  'sumneko_lua',
-  'rust_analyzer',
+  -- 'sumneko_lua',
+  -- 'rust_analyzer',
 })
 
 -- Fix Undefined global 'vim'
-lsp.configure('sumneko_lua', {
-    settings = {
-        Lua = {
-            diagnostics = {
-                globals = { 'vim', 'use' }
-            }
-        }
-    }
-})
+-- lsp.configure('sumneko_lua', {
+--     settings = {
+--         Lua = {
+--             diagnostics = {
+--                 globals = { 'vim', 'use' }
+--             }
+--         }
+--     }
+-- })
 
 local cmp = require('cmp')
 local cmp_select = { behavior = cmp.SelectBehavior.Select }
@@ -52,6 +51,15 @@ lsp.on_attach(function(client, bufnr)
   vim.keymap.set("n", "<leader>vrn", function() vim.lsp.buf.rename() end, opts)
   vim.keymap.set("i", "<C-h>", function() vim.lsp.buf.signature_help() end, opts)
 end)
+
+local opts = { noremap=true, silent=true }
+
+local function quickfix()
+  print("quickfix")
+  vim.lsp.buf.code_action({ apply = true })
+end
+
+vim.keymap.set('n', '<localleader>a', quickfix, opts)
 
 lsp.setup()
 
