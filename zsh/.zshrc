@@ -110,6 +110,13 @@ alias rg="rg --smart-case --heading --line-number --color=always --hidden"
 alias be="bundle exec"
 alias tat="tmux attach -t "
 alias vim="neovim"
+alias ae="nvim ~/.zshrc"
+alias ga="git add"
+alias gb="git branch"
+alias gco="git checkout"
+alias gc="git commit"
+alias ga="git add ."
+alias gam="git commit --amend"
 
 export PATH="$HOME/.amplify/bin:$PATH"
 export PATH="$HOME/.rbenv/bin:$PATH"
@@ -117,3 +124,4 @@ eval "$(rbenv init - zsh)"
 
 export PIVOTAL_PROJECT_ID="2554764"
 export PIVOTAL_TOKEN="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+

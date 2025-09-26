@@ -35,3 +35,9 @@ autocmd('TextYankPost', {
                 })
         end,
     })
+
+autocmd({"BufRead", "BufNewFile"}, {
+        pattern = {"README", "README.*"},
+        command = "set filetype=markdown",
+    })
+
