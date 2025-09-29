@@ -1,68 +1,89 @@
-local lsp = require('lsp-zero')
-lsp.preset('recommended')
+local function lsp_setup()
+  -- Set up completion
+  local cmp = require('cmp')
+  local cmp_select = { behavior = cmp.SelectBehavior.Select }
 
-lsp.ensure_installed({
-  -- 'sumneko_lua',
-  -- 'rust_analyzer',
-})
+  cmp.setup({
+    mapping = {
+      ['<C-p>'] = cmp.mapping.select_prev_item(cmp_select),
+      ['<C-n>'] = cmp.mapping.select_next_item(cmp_select),
+      ['<Up>'] = cmp.mapping.select_prev_item(cmp_select),
+      ['<Down>'] = cmp.mapping.select_next_item(cmp_select),
+      ['<Tab>'] = cmp.mapping.select_next_item(cmp_select),
+      ['<S-Tab>'] = cmp.mapping.select_prev_item(cmp_select),
+      ['<C-y>'] = cmp.mapping.confirm({ select = true }),
+      ['<CR>'] = cmp.mapping.confirm({ select = true }),
+      ['<C-Space>'] = cmp.mapping.complete(),
+    },
+    sources = cmp.config.sources({
+      { name = 'nvim_lsp' },
+      { name = 'luasnip' },
+    }, {
+      { name = 'buffer' },
+    })
+  })
 
--- Fix Undefined global 'vim'
--- lsp.configure('sumneko_lua', {
---     settings = {
---         Lua = {
---             diagnostics = {
---                 globals = { 'vim', 'use' }
---             }
---         }
---     }
--- })
+  -- LSP attach function
+  vim.api.nvim_create_autocmd('LspAttach', {
+    callback = function(args)
+      local bufnr = args.buf
+      local opts = { buffer = bufnr, remap = false }
 
-local cmp = require('cmp')
-local cmp_select = { behavior = cmp.SelectBehavior.Select }
-local cmp_mappings = lsp.defaults.cmp_mappings({
-  ['<C-p>'] = cmp.mapping.select_prev_item(cmp_select),
-  ['<C-n>'] = cmp.mapping.select_next_item(cmp_select),
-  ['<C-y>'] = cmp.mapping.confirm({ select = true }),
-  ['<C-Space>'] = cmp.mapping.complete(),
-})
+      vim.keymap.set("n", "gd", function() vim.lsp.buf.definition() end, opts)
+      vim.keymap.set("n", "K", function() vim.lsp.buf.hover() end, opts)
+      vim.keymap.set("n", "<leader>vws", function() vim.lsp.buf.workspace_symbol() end, opts)
+      vim.keymap.set("n", "<leader>vd", function() vim.diagnostic.open_float() end, opts)
+      vim.keymap.set("n", "[d", function() vim.diagnostic.goto_next() end, opts)
+      vim.keymap.set("n", "]d", function() vim.diagnostic.goto_prev() end, opts)
+      vim.keymap.set("n", "<leader>vca", function() vim.lsp.buf.code_action() end, opts)
+      vim.keymap.set("n", "<leader>vrr", function() vim.lsp.buf.references() end, opts)
+      vim.keymap.set("n", "<leader>vrn", function() vim.lsp.buf.rename() end, opts)
+      vim.keymap.set("i", "<leader>h", function() vim.lsp.buf.signature_help() end, opts)
+    end
+  })
 
-cmp_mappings['<Tab>'] = nil
-cmp_mappings['<S-Tab>'] = nil
+  -- Set up language servers using vim.lsp.config (for nvim 0.11+)
+  local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
-lsp.setup_nvim_cmp({
-  mapping = cmp_mappings
-})
+  -- ESLint
+  vim.lsp.config.eslint = {
+    cmd = { 'vscode-eslint-language-server', '--stdio' },
+    filetypes = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact' },
+    capabilities = capabilities,
+  }
 
-lsp.set_preferences({
-  sign_icons = { }
-})
+  -- Rust Analyzer
+  vim.lsp.config.rust_analyzer = {
+    cmd = { 'rust-analyzer' },
+    filetypes = { 'rust' },
+    capabilities = capabilities,
+  }
 
-lsp.on_attach(function(client, bufnr)
-  local opts = {buffer = bufnr, remap = false}
+  -- Lua LSP
+  vim.lsp.config.lua_ls = {
+    cmd = { 'lua-language-server' },
+    filetypes = { 'lua' },
+    capabilities = capabilities,
+    settings = {
+      Lua = {
+        runtime = {
+          version = 'LuaJIT',
+        },
+        diagnostics = {
+          globals = {'vim'},
+        },
+        workspace = {
+          library = vim.api.nvim_get_runtime_file("", true),
+        },
+        telemetry = {
+          enable = false,
+        },
+      },
+    },
+  }
 
-  vim.keymap.set("n", "gd", function() vim.lsp.buf.definition() end, opts)
-  vim.keymap.set("n", "K", function() vim.lsp.buf.hover() end, opts)
-  vim.keymap.set("n", "<leader>vws", function() vim.lsp.buf.workspace_symbol() end, opts)
-  vim.keymap.set("n", "<leader>vd", function() vim.diagnostic.open_float() end, opts)
-  vim.keymap.set("n", "[d", function() vim.diagnostic.goto_next() end, opts)
-  vim.keymap.set("n", "]d", function() vim.diagnostic.goto_prev() end, opts)
-  vim.keymap.set("n", "<leader>vca", function() vim.lsp.buf.code_action() end, opts)
-  vim.keymap.set("n", "<leader>vrr", function() vim.lsp.buf.references() end, opts)
-  vim.keymap.set("n", "<leader>vrn", function() vim.lsp.buf.rename() end, opts)
-  vim.keymap.set("i", "<C-h>", function() vim.lsp.buf.signature_help() end, opts)
-end)
-
-local opts = { noremap=true, silent=true }
-
-local function quickfix()
-  print("quickfix")
-  vim.lsp.buf.code_action({ apply = true })
+  -- Enable LSP for these filetypes
+  vim.lsp.enable({ 'eslint', 'rust_analyzer', 'lua_ls' })
 end
 
-vim.keymap.set('n', '<localleader>a', quickfix, opts)
-
-lsp.setup()
-
-vim.diagnostic.config({
-  virtual_text = true
-})
+lsp_setup()

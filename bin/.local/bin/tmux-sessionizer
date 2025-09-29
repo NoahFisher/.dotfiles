@@ -3,7 +3,7 @@
 if [[ $# -eq 1 ]]; then
     selected=$1
 else
-    selected=$(find ~/dev/simplepractice/web/simplepractice.git ~/dev/simplepractice ~/dev/workflow ~/dev/open-source ~/dev/ai ~/dev/hackathons ~ ~/Documents/ ~/.config/ -mindepth 1 -maxdepth 1 -type d -not -path '**/hooks' -not -path '**/refs' -not -path '**/objects' -not -path '**/logs' -not -path '**/worktrees' | fzf)
+    selected=$(find ~/dev/simplepractice ~/dev/simplepractice/data-metaflow/projects/ ~/dev/workflow ~/.dotfiles/.config ~/dev/open-source ~/dev/ai ~/dev/hackathons ~/dev ~ ~/Documents/ ~/.config/ -mindepth 1 -maxdepth 1 -type d -not -path '**/hooks' -not -path '**/refs' -not -path '**/objects' -not -path '**/logs' -not -path '**/worktrees' | fzf)
 fi
 
 if [[ -z $selected ]]; then
@@ -11,6 +11,7 @@ if [[ -z $selected ]]; then
 fi
 
 selected_name=$(basename "$selected" | tr . _)
+echo $selected_name
 tmux_running=$(pgrep tmux)
 
 if [[ -z $TMUX ]] && [[ -z $tmux_running ]]; then
@@ -19,7 +20,12 @@ if [[ -z $TMUX ]] && [[ -z $tmux_running ]]; then
 fi
 
 if ! tmux has-session -t=$selected_name 2> /dev/null; then
+    echo "tmux session $selected_name not found, creating..."
     tmux new-session -ds $selected_name -c $selected
 fi
 
-tmux switch-client -t $selected_name
+if [[ -z $TMUX ]]; then
+    tmux attach-session -t $selected_name
+else
+    tmux switch-client -t $selected_name
+fi

@@ -51,6 +51,3 @@ vim.opt.listchars = {
 }
 
 vim.g.node_host_prog = '/Users/noah/.nvm/versions/node/v18.20.1/bin/node'
-vim.g.copilot_node_command = '/Users/noah/.nvm/versions/node/v18.20.1/bin/node'
-
-

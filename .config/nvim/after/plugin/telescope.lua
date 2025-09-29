@@ -16,7 +16,7 @@ local nnoremap = Remap.nnoremap
 -- 	},
 -- })
 
-nnoremap("<leader>a", ":Telescope find_files<CR>")
+nnoremap("<leader>af", ":Telescope find_files<CR>")
 nnoremap("<leader>b", ":Telescope buffers<CR>")
 nnoremap("<leader>s", ":Telescope tags<CR>")
 nnoremap("<leader>t", ":Telescope git_files<CR>")
