@@ -1,4 +1,4 @@
-vim.g.copilot_node_command = '/Users/noah/.nvm/versions/node/v20.17.0/bin/node'
+vim.g.copilot_node_command = '/Users/noah/.nvm/versions/node/v22.20.0/bin/node'
 
 vim.keymap.set('i', '<C-J>', 'copilot#Accept("\\<CR>")', {
   expr = true,

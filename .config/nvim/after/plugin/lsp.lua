@@ -50,6 +50,9 @@ local function lsp_setup()
     cmd = { 'vscode-eslint-language-server', '--stdio' },
     filetypes = { 'javascript', 'javascriptreact', 'typescript', 'typescriptreact' },
     capabilities = capabilities,
+    root_dir = function(fname)
+      return vim.fs.root(fname, { '.eslintrc.js', '.eslintrc.json', '.eslintrc', 'package.json' })
+    end,
   }
 
   -- Rust Analyzer

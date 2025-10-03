@@ -103,22 +103,37 @@ require("lazy").setup({
   -- TreeSitter
   {
     "nvim-treesitter/nvim-treesitter",
-    build = function()
-      local ts_update = require("nvim-treesitter.install").update({ with_sync = true })
-      ts_update()
-    end,
-    event = { "BufReadPost", "BufNewFile" },
+    build = ":TSUpdate",
+    lazy = false,
     config = function()
       require("nvim-treesitter.configs").setup({
-        ensure_installed = { "javascript", "typescript", "lua", "ruby", "go", "rust" },
-        sync_install = false,
-        auto_install = false, -- Disable auto-install to prevent repeated installations
         highlight = {
           enable = true,
           additional_vim_regex_highlighting = false,
         },
       })
     end,
+  },
+
+  -- mini.icon
+  {
+    "echasnovski/mini.nvim",
+    lazy = false,
+    priority = 1000,
+    config = function()
+      require('mini.icons').setup()
+    end,
+  },
+
+  -- Markdown rendering
+  {
+    'MeanderingProgrammer/render-markdown.nvim',
+    dependencies = { 'nvim-treesitter/nvim-treesitter', 'echasnovski/mini.nvim' },
+    ---@module 'render-markdown'
+    ---@type render.md.UserConfig
+    opts = {
+      preset = 'lazy',
+    },
   },
 
   -- Go support
@@ -144,25 +159,6 @@ require("lazy").setup({
 
   -- Goyo
   { "junegunn/goyo.vim", cmd = "Goyo" },
-
-  -- Avante.nvim and its dependencies
-  {
-    "yetone/avante.nvim",
-    branch = "main",
-    build = "make",
-    cmd = { "AvanteOpen", "AvanteToggle" },
-    config = function()
-      require("avante_lib").load()
-    end,
-    dependencies = {
-      "stevearc/dressing.nvim",
-      "nvim-lua/plenary.nvim",
-      "MunifTanjim/nui.nvim",
-      "echasnovski/mini.icons",
-      "HakonHarnes/img-clip.nvim",
-      "zbirenbaum/copilot.lua",
-    }
-  },
 }, {
   -- Lazy.nvim configuration options
   defaults = {
