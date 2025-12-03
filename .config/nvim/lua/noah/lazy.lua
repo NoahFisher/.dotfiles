@@ -82,6 +82,27 @@ require("lazy").setup({
   -- Vim plugins
   { "junegunn/vim-easy-align", cmd = "EasyAlign" },
   { "morhetz/gruvbox", lazy = false, priority = 1000 },
+  {
+    "catppuccin/nvim",
+    name = "catppuccin",
+    lazy = false,
+    priority = 1000,
+    config = function()
+      require("catppuccin").setup({
+        flavour = "mocha", -- latte, frappe, macchiato, mocha
+        transparent_background = true,
+        integrations = {
+          telescope = true,
+          harpoon = true,
+          mason = true,
+          native_lsp = {
+            enabled = true,
+          },
+          treesitter = true,
+        },
+      })
+    end,
+  },
   { "scrooloose/nerdtree", cmd = { "NERDTree", "NERDTreeToggle", "NERDTreeFind" } },
   { "thoughtbot/vim-rspec", ft = "ruby" },
   "tpope/vim-abolish",
@@ -159,6 +180,16 @@ require("lazy").setup({
 
   -- Goyo
   { "junegunn/goyo.vim", cmd = "Goyo" },
+
+  -- Image clipboard
+  {
+    "HakonHarnes/img-clip.nvim",
+    event = "VeryLazy",
+    opts = {},
+    keys = {
+      { "<leader>p", "<cmd>PasteImage<cr>", desc = "Paste image from system clipboard" },
+    },
+  },
 }, {
   -- Lazy.nvim configuration options
   defaults = {

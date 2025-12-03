@@ -85,8 +85,63 @@ local function lsp_setup()
     },
   }
 
+  -- Ember Language Server
+  vim.lsp.config.ember = {
+    cmd = { 'ember-language-server', '--stdio' },
+    filetypes = { 'handlebars', 'typescript', 'javascript' },
+    capabilities = capabilities,
+    root_dir = function(fname)
+      return vim.fs.root(fname, { 'ember-cli-build.js', '.ember-cli', 'package.json' })
+    end,
+  }
+
+  -- Go Language Server (gopls)
+  vim.lsp.config.gopls = {
+    cmd = { 'gopls' },
+    filetypes = { 'go', 'gomod', 'gowork', 'gotmpl' },
+    capabilities = capabilities,
+    root_dir = function(fname)
+      return vim.fs.root(fname, { 'go.mod', 'go.work', '.git' })
+    end,
+    settings = {
+      gopls = {
+        analyses = {
+          unusedparams = true,
+        },
+        staticcheck = true,
+        gofumpt = true,
+      },
+    },
+  }
+
   -- Enable LSP for these filetypes
-  vim.lsp.enable({ 'eslint', 'rust_analyzer', 'lua_ls' })
+  vim.lsp.enable('eslint')
+  vim.lsp.enable('rust_analyzer')
+  vim.lsp.enable('lua_ls')
+  vim.lsp.enable('ember')
+  vim.lsp.enable('gopls')
+
+  -- Explicitly start gopls for Go files (fallback if vim.lsp.enable doesn't work)
+  vim.api.nvim_create_autocmd('FileType', {
+    pattern = { 'go', 'gomod', 'gowork', 'gotmpl' },
+    callback = function()
+      vim.lsp.start({
+        name = 'gopls',
+        cmd = { 'gopls' },
+        root_dir = vim.fs.root(0, { 'go.mod', 'go.work', '.git' }),
+        capabilities = capabilities,
+        settings = {
+          gopls = {
+            analyses = {
+              unusedparams = true,
+            },
+            staticcheck = true,
+            gofumpt = true,
+          },
+        },
+      })
+    end,
+  })
 end
 
 lsp_setup()
