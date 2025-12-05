@@ -1,0 +1,35 @@
+[alias]
+  co = checkout
+  ci = commit
+  st = status
+  br = branch
+  hist = log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short
+  l = log --pretty=format:\"%Cgreen%h%Creset | %cr %cn %Cgreen%s%Creset\"
+  recent = branch --sort=committerdate --format="%(committerdate:relative)%09%(refname:short)"
+
+[filter "lfs"]
+  clean = git-lfs clean -- %f
+  smudge = git-lfs smudge -- %f
+  process = git-lfs filter-process
+  required = true
+[user]
+  name = NoahFisher
+  email = noah@simplepractice.com
+  signingkey = AD73D92D2759B24E
+[init]
+  templatedir = ~/.git_template
+	defaultBranch = main
+[core]
+  excludesfile = /Users/noah/.gitignore_global
+[commit]
+	gpgsign = true
+[gpg]
+	program = gpg
+[pull]
+	rebase = true
+[credential "https://github.com"]
+	helper = 
+	helper = !/opt/homebrew/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/opt/homebrew/bin/gh auth git-credential
