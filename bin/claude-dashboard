@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+
+# Claude Code Dashboard — shows all running Claude Code sessions across tmux
+
+set -euo pipefail
+
+# Catppuccin Mocha colors
+GREEN=$'\033[38;2;166;227;161m'   # #a6e3a1
+YELLOW=$'\033[38;2;249;226;175m'  # #f9e2af
+GREY=$'\033[38;2;108;112;134m'    # #6c7086
+TEXT=$'\033[38;2;205;214;244m'    # #cdd6f4
+DIM=$'\033[38;2;69;71;90m'        # #45475a
+BOLD=$'\033[1m'
+RESET=$'\033[0m'
+
+SEP=$'\x1f'
+
+detect_state() {
+    local content="$1"
+    if echo "$content" | grep -q "Do you want to proceed\|Yes, allow\|No, and tell Claude"; then
+        echo "WAITING"; return
+    fi
+    if echo "$content" | grep -q "Tab to amend\|Esc to cancel"; then
+        echo "WAITING"; return
+    fi
+    if echo "$content" | grep -q "esc to interrupt\|ctrl+c to interrupt"; then
+        echo "RUNNING"; return
+    fi
+    if echo "$content" | grep -qE "Germinating…|Brewing…|Spinning…|Composting…|Channeling…|Cultivating…|Distilling…|Fermenting…|Forging…|Nurturing…|Percolating…|Simmering…|Weaving…|Baking…"; then
+        echo "RUNNING"; return
+    fi
+    echo "IDLE"
+}
+
+extract_activity() {
+    local content="$1"
+    local st="$2"
+    local result=""
+
+    if [[ "$st" == "WAITING" ]]; then
+        result=$(echo "$content" | grep -E '^\s*⏺\s+\S' | tail -1 | sed 's/^[[:space:]]*⏺[[:space:]]*//' | cut -c1-60)
+        [[ -n "$result" ]] && echo "$result" && return
+    fi
+
+    if [[ "$st" == "RUNNING" ]]; then
+        result=$(echo "$content" | grep -E 'Running…|Reading|Writing|Searching|Editing|Germinating…|Brewing…|Spinning…|Composting…|Channeling…|Cultivating…|Distilling…|Fermenting…|Forging…|Nurturing…|Percolating…|Simmering…|Weaving…|Baking…' | tail -1 | sed 's/^[[:space:]]*//' | cut -c1-60)
+        [[ -n "$result" ]] && echo "$result" && return
+    fi
+
+    if [[ "$st" == "IDLE" ]]; then
+        result=$(echo "$content" | grep -E '^❯ ' | tail -1 | sed 's/^❯ //' | cut -c1-60)
+        [[ -n "$result" ]] && echo "$result" && return
+    fi
+}
+
+build_entries() {
+    local panes
+    panes=$(tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index} #{pane_current_command} #{pane_current_path} #{pane_activity}' 2>/dev/null) || return
+
+    while IFS=' ' read -r target cmd pane_path pane_activity; do
+        [[ -z "$target" ]] && continue
+
+        # Match Claude version pattern (e.g. 2.1.29)
+        if [[ "$cmd" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            local content
+            content=$(tmux capture-pane -t "$target" -p 2>/dev/null | tail -30)
+            local st
+            st=$(detect_state "$content")
+            local activity
+            activity=$(extract_activity "$content" "$st")
+            local dir
+            dir=$(basename "$pane_path")
+
+            local sort_key=2
+            [[ "$st" == "RUNNING" ]] && sort_key=1
+            [[ "$st" == "WAITING" ]] && sort_key=0
+
+            printf '%s%s%s%s%s%s%s%s%s%s%s\n' "$sort_key" "$SEP" "${pane_activity:-0}" "$SEP" "$st" "$SEP" "$target" "$SEP" "$dir" "$SEP" "$activity"
+        fi
+    done <<< "$panes" | sort -t"$SEP" -k1,1n -k2,2rn
+}
+
+# Parse a SEP-delimited entry into variables
+# Sets: _sort _pane_activity _st _target _dir _activity
+parse_entry() {
+    IFS="$SEP" read -r _sort _pane_activity _st _target _dir _activity <<< "$1"
+}
+
+render() {
+    local raw
+    raw=$(build_entries)
+
+    local running=0 waiting=0 idle=0
+    local -a lines=()
+
+    if [[ -n "$raw" ]]; then
+        while IFS= read -r entry; do
+            [[ -z "$entry" ]] && continue
+            lines+=("$entry")
+            parse_entry "$entry"
+            case "$_st" in
+                RUNNING) ((running++)) || true;;
+                WAITING) ((waiting++)) || true;;
+                IDLE)    ((idle++)) || true;;
+            esac
+        done <<< "$raw"
+    fi
+
+    local total=$((running + waiting + idle))
+    if [[ $total -eq 0 ]]; then
+        printf " %sNo Claude Code sessions found%s\n" "$GREY" "$RESET"
+        return
+    fi
+
+    # Header
+    printf " %s%sClaude Code Sessions%s" "$BOLD" "$TEXT" "$RESET"
+    [[ $running -gt 0 ]] && printf "  %s%d running%s" "$GREEN" "$running" "$RESET"
+    [[ $waiting -gt 0 ]] && printf "  %s%d waiting%s" "$YELLOW" "$waiting" "$RESET"
+    [[ $idle -gt 0 ]] && printf "  %s%d idle%s" "$GREY" "$idle" "$RESET"
+    printf "\n"
+    printf " %s" "$DIM"
+    local i
+    for ((i=0; i<90; i++)); do printf '─'; done
+    printf "%s\n" "$RESET"
+
+    # Entries
+    for entry in "${lines[@]}"; do
+        parse_entry "$entry"
+
+        local color="" icon=""
+        case "$_st" in
+            RUNNING) color="$GREEN"; icon="●";;
+            WAITING) color="$YELLOW"; icon="◉";;
+            *)       color="$GREY"; icon="○";;
+        esac
+
+        printf " %s%s %-9s%s %-30s %s%-25s%s" "$color" "$icon" "$_st" "$RESET" "$_target" "$DIM" "$_dir" "$RESET"
+        if [[ -n "${_activity:-}" ]]; then
+            printf " %s%s%s" "$GREY" "$_activity" "$RESET"
+        fi
+        printf "\n"
+    done
+}
+
+render_interactive() {
+    local raw
+    raw=$(build_entries)
+    [[ -z "$raw" ]] && return
+
+    while IFS= read -r entry; do
+        [[ -z "$entry" ]] && continue
+        parse_entry "$entry"
+
+        local color="" icon=""
+        case "$_st" in
+            RUNNING) color="$GREEN"; icon="●";;
+            WAITING) color="$YELLOW"; icon="◉";;
+            *)       color="$GREY"; icon="○";;
+        esac
+
+        printf '%s\t%s%s %-9s%s %-30s %s%-20s%s %s%s%s\n' \
+            "$_target" "$color" "$icon" "$_st" "$RESET" "$_target" "$DIM" "$_dir" "$RESET" "$GREY" "${_activity:-}" "$RESET"
+    done <<< "$raw"
+}
+
+do_interactive() {
+    # Pick a port for fzf --listen so we can trigger reloads from a background poller
+    local port=$((10000 + RANDOM % 50000))
+
+    # Background poller: every 3s, tell fzf to reload
+    (
+        sleep 3
+        while true; do
+            curl -s "localhost:${port}" -d 'reload(claude-dashboard --fzf-entries)' 2>/dev/null || break
+            sleep 3
+        done
+    ) &
+    local poller_pid=$!
+    trap "kill $poller_pid 2>/dev/null" EXIT
+
+    local selection
+    selection=$(render_interactive | fzf --ansi \
+        --listen "$port" \
+        --delimiter=$'\t' \
+        --with-nth=2 \
+        --header=" Claude Code Sessions — select to switch · auto-refreshes every 3s" \
+        --header-first \
+        --no-sort \
+        --reverse \
+        --bind "ctrl-r:reload(claude-dashboard --fzf-entries)" \
+        --preview="tmux capture-pane -t {1} -p | tail -40" \
+        --preview-window=right:50%:wrap) || true
+
+    kill $poller_pid 2>/dev/null || true
+
+    [[ -z "$selection" ]] && exit 0
+
+    local target="${selection%%	*}"
+
+    # switch-client -t with the full pane target handles everything in one call
+    tmux switch-client -t "$target"
+}
+
+do_watch() {
+    while true; do
+        clear
+        render
+        printf "\n %sRefreshing every 2s · press ctrl+c to exit%s\n" "$DIM" "$RESET"
+        sleep 2
+    done
+}
+
+case "${1:-}" in
+    --interactive|-i)
+        do_interactive
+        ;;
+    --watch|-w)
+        do_watch
+        ;;
+    --fzf-entries)
+        render_interactive
+        ;;
+    --list|"")
+        render
+        ;;
+    *)
+        echo "Usage: claude-dashboard [--list|--interactive|-i|--watch|-w]"
+        exit 1
+        ;;
+esac
