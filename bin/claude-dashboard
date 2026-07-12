@@ -1,21 +1,66 @@
 #!/usr/bin/env bash
 
-# Claude Code Dashboard — shows all running Claude Code sessions across tmux
+# AI Agent Dashboard — shows all running AI coding sessions across tmux
+# Supports: Claude Code, Codex (OpenAI), Gemini CLI, Cursor Agent
 
 set -euo pipefail
 
 # Catppuccin Mocha colors
-GREEN=$'\033[38;2;166;227;161m'   # #a6e3a1
-YELLOW=$'\033[38;2;249;226;175m'  # #f9e2af
-GREY=$'\033[38;2;108;112;134m'    # #6c7086
+GREEN=$'\033[38;2;166;227;161m'   # #a6e3a1  running
+YELLOW=$'\033[38;2;249;226;175m'  # #f9e2af  waiting
+GREY=$'\033[38;2;108;112;134m'    # #6c7086  idle
 TEXT=$'\033[38;2;205;214;244m'    # #cdd6f4
 DIM=$'\033[38;2;69;71;90m'        # #45475a
+TEAL=$'\033[38;2;148;226;213m'    # #94e2d5  claude
+BLUE=$'\033[38;2;137;180;250m'    # #89b4fa  codex
+MAUVE=$'\033[38;2;203;166;247m'   # #cba6f7  gemini
+PEACH=$'\033[38;2;250;179;135m'   # #fab387  cursor
 BOLD=$'\033[1m'
 RESET=$'\033[0m'
 
 SEP=$'\x1f'
 
-detect_state() {
+# ── Agent-type detection ──────────────────────────────────────────────────────
+
+# Returns: claude | codex | gemini | cursor | ""
+detect_agent_type() {
+    local cmd="$1"
+    local target="$2"
+
+    # Claude Code shows its version number as the process name
+    if [[ "$cmd" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "claude"; return
+    fi
+
+    # Cursor background agent has a distinct binary name
+    if [[ "$cmd" == "agent" ]]; then
+        echo "cursor"; return
+    fi
+
+    # Codex, Gemini, and Cursor Agent all run as 'node' — distinguish by processes on the pane's tty
+    if [[ "$cmd" == "node" ]]; then
+        local pane_tty
+        pane_tty=$(tmux display-message -t "$target" -p '#{pane_tty}' 2>/dev/null) || return
+        local tty_short="${pane_tty#/dev/}"
+        local procs
+        procs=$(ps -t "$tty_short" -o command= 2>/dev/null) || return
+        if echo "$procs" | grep -qF "cursor-agent"; then
+            echo "cursor"; return
+        fi
+        if echo "$procs" | grep -qF "codex"; then
+            echo "codex"; return
+        fi
+        if echo "$procs" | grep -qF "gemini"; then
+            echo "gemini"; return
+        fi
+    fi
+
+    echo ""
+}
+
+# ── State detection ───────────────────────────────────────────────────────────
+
+detect_state_claude() {
     local content="$1"
     if echo "$content" | grep -q "Do you want to proceed\|Yes, allow\|No, and tell Claude"; then
         echo "WAITING"; return
@@ -32,27 +77,138 @@ detect_state() {
     echo "IDLE"
 }
 
-extract_activity() {
+detect_state_codex() {
     local content="$1"
-    local st="$2"
-    local result=""
+    if echo "$content" | grep -q "Would you like to run the following command\|Press enter to confirm or esc to cancel\|tell Codex what to do differently"; then
+        echo "WAITING"; return
+    fi
+    # Codex uses a braille spinner when thinking (check first char of a line)
+    if echo "$content" | grep -qF "⠋" || echo "$content" | grep -qF "⠙" || echo "$content" | grep -qF "⠹"; then
+        echo "RUNNING"; return
+    fi
+    echo "IDLE"
+}
 
+detect_state_gemini() {
+    local content="$1"
+    if echo "$content" | grep -q "Allow gemini to\|Deny this action\|approve this action"; then
+        echo "WAITING"; return
+    fi
+    if echo "$content" | grep -qF "Thinking..." || echo "$content" | grep -qF "⠋" || echo "$content" | grep -qF "⠹"; then
+        echo "RUNNING"; return
+    fi
+    # Gemini is idle when it shows the input prompt
+    if echo "$content" | grep -q "Type your message"; then
+        echo "IDLE"; return
+    fi
+    echo "IDLE"
+}
+
+detect_state_cursor() {
+    local content="$1"
+    # "→ Add a follow-up" is definitive idle chrome — check first
+    if echo "$content" | grep -q "→ Add a follow-up"; then
+        echo "IDLE"; return
+    fi
+    # Cursor shows "Auto · X% · N files edited" while actively working
+    if echo "$content" | grep -qE "Auto ·|Applying"; then
+        echo "RUNNING"; return
+    fi
+    echo "IDLE"
+}
+
+detect_state() {
+    local agent_type="$1"
+    local content="$2"
+    case "$agent_type" in
+        claude) detect_state_claude "$content";;
+        codex)  detect_state_codex "$content";;
+        gemini) detect_state_gemini "$content";;
+        cursor) detect_state_cursor "$content";;
+        *)      echo "IDLE";;
+    esac
+}
+
+# ── Activity extraction ───────────────────────────────────────────────────────
+
+extract_activity_claude() {
+    local content="$1" st="$2" result=""
     if [[ "$st" == "WAITING" ]]; then
-        result=$(echo "$content" | grep -E '^\s*⏺\s+\S' | tail -1 | sed 's/^[[:space:]]*⏺[[:space:]]*//' | cut -c1-60)
+        result=$(echo "$content" | grep -E '^\s*⏺\s+\S' | tail -1 | sed 's/^[[:space:]]*⏺[[:space:]]*//' | cut -c1-55)
         [[ -n "$result" ]] && echo "$result" && return
     fi
-
     if [[ "$st" == "RUNNING" ]]; then
-        result=$(echo "$content" | grep -E 'Running…|Reading|Writing|Searching|Editing|Germinating…|Brewing…|Spinning…|Composting…|Channeling…|Cultivating…|Distilling…|Fermenting…|Forging…|Nurturing…|Percolating…|Simmering…|Weaving…|Baking…' | tail -1 | sed 's/^[[:space:]]*//' | cut -c1-60)
+        result=$(echo "$content" | grep -E 'Running…|Reading|Writing|Searching|Editing|Germinating…|Brewing…|Spinning…|Composting…|Channeling…|Cultivating…|Distilling…|Fermenting…|Forging…|Nurturing…|Percolating…|Simmering…|Weaving…|Baking…' | tail -1 | sed 's/^[[:space:]]*//' | cut -c1-55)
         [[ -n "$result" ]] && echo "$result" && return
     fi
-
     if [[ "$st" == "IDLE" ]]; then
-        result=$(echo "$content" | grep -E '^❯ ' | tail -1 | sed 's/^❯ //' | cut -c1-60)
+        result=$(echo "$content" | grep -E '^❯ ' | tail -1 | sed 's/^❯ //' | cut -c1-55)
         [[ -n "$result" ]] && echo "$result" && return
     fi
 }
 
+extract_activity_codex() {
+    local content="$1" st="$2" result=""
+    if [[ "$st" == "WAITING" ]]; then
+        # Show the Reason line explaining what command is being requested
+        result=$(echo "$content" | grep -E "Reason:" | tail -1 | sed 's/^[[:space:]]*Reason:[[:space:]]*//' | cut -c1-55)
+        [[ -n "$result" ]] && echo "$result" && return
+        result=$(echo "$content" | grep -E '^\s*\$\s' | tail -1 | sed 's/^[[:space:]]*\$[[:space:]]*//' | cut -c1-55)
+        [[ -n "$result" ]] && echo "$result" && return
+    fi
+    # Last bullet point from codex output
+    result=$(echo "$content" | grep -E '^\s*•\s' | tail -1 | sed 's/^[[:space:]]*•[[:space:]]*//' | cut -c1-55)
+    [[ -n "$result" ]] && echo "$result" && return
+    # Context remaining as fallback
+    result=$(echo "$content" | grep -E "context left" | tail -1 | sed 's/^[[:space:]]*//' | cut -c1-55)
+    [[ -n "$result" ]] && echo "$result" && return
+}
+
+extract_activity_gemini() {
+    local content="$1" st="$2" result=""
+    # Last meaningful non-chrome line
+    result=$(echo "$content" | grep -vE '^[-─ ]+$|Type your message|auto-accept|\? for shortcuts|/model|shift\+tab' | grep -E '\S' | tail -1 | sed 's/^[[:space:]]*//' | cut -c1-55)
+    [[ -n "$result" ]] && echo "$result" && return
+}
+
+extract_activity_cursor() {
+    local content="$1" st="$2" result=""
+    # Only show the progress line when actually running
+    if [[ "$st" == "RUNNING" ]]; then
+        result=$(echo "$content" | grep -E "Auto ·|[0-9]+% ·" | tail -1 | sed 's/^[[:space:]]*//' | cut -c1-55)
+        [[ -n "$result" ]] && echo "$result" && return
+    fi
+    # Last meaningful content line (skip cursor chrome)
+    result=$(echo "$content" | grep -vE '→ Add a follow-up|/ commands|ctrl\+r|Auto-run all|▶︎|Auto ·|[0-9]+% ·|^[[:space:]]*[┌└├─│]+' | grep -E '\S' | tail -1 | sed 's/^[[:space:]]*//' | cut -c1-55)
+    [[ -n "$result" ]] && echo "$result" && return
+}
+
+extract_activity() {
+    local agent_type="$1" content="$2" st="$3"
+    case "$agent_type" in
+        claude) extract_activity_claude "$content" "$st";;
+        codex)  extract_activity_codex "$content" "$st";;
+        gemini) extract_activity_gemini "$content" "$st";;
+        cursor) extract_activity_cursor "$content" "$st";;
+    esac
+}
+
+# ── Display helpers ───────────────────────────────────────────────────────────
+
+agent_color() {
+    case "$1" in
+        claude) echo "$TEAL";;
+        codex)  echo "$BLUE";;
+        gemini) echo "$MAUVE";;
+        cursor) echo "$PEACH";;
+        *)      echo "$GREY";;
+    esac
+}
+
+# ── Entry building ────────────────────────────────────────────────────────────
+
+# Entry format (SEP-delimited):
+#   sort_key SEP pane_activity SEP agent_type SEP state SEP target SEP dir SEP activity
 build_entries() {
     local panes
     panes=$(tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index} #{pane_current_command} #{pane_current_path} #{pane_activity}' 2>/dev/null) || return
@@ -60,31 +216,43 @@ build_entries() {
     while IFS=' ' read -r target cmd pane_path pane_activity; do
         [[ -z "$target" ]] && continue
 
-        # Match Claude version pattern (e.g. 2.1.29)
-        if [[ "$cmd" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            local content
-            content=$(tmux capture-pane -t "$target" -p 2>/dev/null | tail -30)
-            local st
-            st=$(detect_state "$content")
-            local activity
-            activity=$(extract_activity "$content" "$st")
-            local dir
-            dir=$(basename "$pane_path")
+        # Pre-filter to candidates: version numbers (claude), node (codex/gemini), agent (cursor)
+        case "$cmd" in
+            [0-9]*.[0-9]*.[0-9]*|node|agent) ;;
+            *) continue;;
+        esac
 
-            local sort_key=2
-            [[ "$st" == "RUNNING" ]] && sort_key=1
-            [[ "$st" == "WAITING" ]] && sort_key=0
+        local agent_type
+        agent_type=$(detect_agent_type "$cmd" "$target")
+        [[ -z "$agent_type" ]] && continue
 
-            printf '%s%s%s%s%s%s%s%s%s%s%s\n' "$sort_key" "$SEP" "${pane_activity:-0}" "$SEP" "$st" "$SEP" "$target" "$SEP" "$dir" "$SEP" "$activity"
-        fi
+        local content
+        content=$(tmux capture-pane -t "$target" -p 2>/dev/null | tail -40)
+
+        local st
+        st=$(detect_state "$agent_type" "$content")
+        local activity
+        activity=$(extract_activity "$agent_type" "$content" "$st")
+        local dir
+        dir=$(basename "$pane_path")
+
+        local sort_key=2
+        [[ "$st" == "RUNNING" ]] && sort_key=1
+        [[ "$st" == "WAITING" ]] && sort_key=0
+
+        printf '%s%s%s%s%s%s%s%s%s%s%s%s%s\n' \
+            "$sort_key" "$SEP" "${pane_activity:-0}" "$SEP" \
+            "$agent_type" "$SEP" "$st" "$SEP" \
+            "$target" "$SEP" "$dir" "$SEP" "$activity"
     done <<< "$panes" | sort -t"$SEP" -k1,1n -k2,2rn
 }
 
-# Parse a SEP-delimited entry into variables
-# Sets: _sort _pane_activity _st _target _dir _activity
+# Sets: _sort _pane_activity _agent_type _st _target _dir _activity
 parse_entry() {
-    IFS="$SEP" read -r _sort _pane_activity _st _target _dir _activity <<< "$1"
+    IFS="$SEP" read -r _sort _pane_activity _agent_type _st _target _dir _activity <<< "$1"
 }
+
+# ── Render ────────────────────────────────────────────────────────────────────
 
 render() {
     local raw
@@ -108,36 +276,36 @@ render() {
 
     local total=$((running + waiting + idle))
     if [[ $total -eq 0 ]]; then
-        printf " %sNo Claude Code sessions found%s\n" "$GREY" "$RESET"
+        printf " %sNo AI agent sessions found%s\n" "$GREY" "$RESET"
         return
     fi
 
-    # Header
-    printf " %s%sClaude Code Sessions%s" "$BOLD" "$TEXT" "$RESET"
+    printf " %s%sAI Agent Sessions%s" "$BOLD" "$TEXT" "$RESET"
     [[ $running -gt 0 ]] && printf "  %s%d running%s" "$GREEN" "$running" "$RESET"
     [[ $waiting -gt 0 ]] && printf "  %s%d waiting%s" "$YELLOW" "$waiting" "$RESET"
     [[ $idle -gt 0 ]] && printf "  %s%d idle%s" "$GREY" "$idle" "$RESET"
     printf "\n"
     printf " %s" "$DIM"
-    local i
-    for ((i=0; i<90; i++)); do printf '─'; done
+    local i; for ((i=0; i<90; i++)); do printf '─'; done
     printf "%s\n" "$RESET"
 
-    # Entries
     for entry in "${lines[@]}"; do
         parse_entry "$entry"
 
-        local color="" icon=""
+        local acolor icon scolor
+        acolor=$(agent_color "$_agent_type")
         case "$_st" in
-            RUNNING) color="$GREEN"; icon="●";;
-            WAITING) color="$YELLOW"; icon="◉";;
-            *)       color="$GREY"; icon="○";;
+            RUNNING) scolor="$GREEN"; icon="●";;
+            WAITING) scolor="$YELLOW"; icon="◉";;
+            *)       scolor="$GREY"; icon="○";;
         esac
 
-        printf " %s%s %-9s%s %-30s %s%-25s%s" "$color" "$icon" "$_st" "$RESET" "$_target" "$DIM" "$_dir" "$RESET"
-        if [[ -n "${_activity:-}" ]]; then
-            printf " %s%s%s" "$GREY" "$_activity" "$RESET"
-        fi
+        printf " %s%s%s %s%-6s%s %-9s %-28s %s%-20s%s" \
+            "$scolor" "$icon" "$RESET" \
+            "$acolor" "$_agent_type" "$RESET" \
+            "$_st" "$_target" \
+            "$DIM" "$_dir" "$RESET"
+        [[ -n "${_activity:-}" ]] && printf " %s%s%s" "$GREY" "$_activity" "$RESET"
         printf "\n"
     done
 }
@@ -151,23 +319,27 @@ render_interactive() {
         [[ -z "$entry" ]] && continue
         parse_entry "$entry"
 
-        local color="" icon=""
+        local acolor icon scolor
+        acolor=$(agent_color "$_agent_type")
         case "$_st" in
-            RUNNING) color="$GREEN"; icon="●";;
-            WAITING) color="$YELLOW"; icon="◉";;
-            *)       color="$GREY"; icon="○";;
+            RUNNING) scolor="$GREEN"; icon="●";;
+            WAITING) scolor="$YELLOW"; icon="◉";;
+            *)       scolor="$GREY"; icon="○";;
         esac
 
-        printf '%s\t%s%s %-9s%s %-30s %s%-20s%s %s%s%s\n' \
-            "$_target" "$color" "$icon" "$_st" "$RESET" "$_target" "$DIM" "$_dir" "$RESET" "$GREY" "${_activity:-}" "$RESET"
+        printf '%s\t%s%s%s %s%-6s%s %-9s %-28s %s%-20s%s %s%s%s\n' \
+            "$_target" \
+            "$scolor" "$icon" "$RESET" \
+            "$acolor" "$_agent_type" "$RESET" \
+            "$_st" "$_target" \
+            "$DIM" "$_dir" "$RESET" \
+            "$GREY" "${_activity:-}" "$RESET"
     done <<< "$raw"
 }
 
 do_interactive() {
-    # Pick a port for fzf --listen so we can trigger reloads from a background poller
     local port=$((10000 + RANDOM % 50000))
 
-    # Background poller: every 3s, tell fzf to reload
     (
         sleep 3
         while true; do
@@ -183,7 +355,7 @@ do_interactive() {
         --listen "$port" \
         --delimiter=$'\t' \
         --with-nth=2 \
-        --header=" Claude Code Sessions — select to switch · auto-refreshes every 3s" \
+        --header=" AI Agent Sessions — select to switch · auto-refreshes every 3s" \
         --header-first \
         --no-sort \
         --reverse \
@@ -196,8 +368,6 @@ do_interactive() {
     [[ -z "$selection" ]] && exit 0
 
     local target="${selection%%	*}"
-
-    # switch-client -t with the full pane target handles everything in one call
     tmux switch-client -t "$target"
 }
 

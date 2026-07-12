@@ -111,8 +111,8 @@ require("lazy").setup({
   { "tpope/vim-endwise", ft = "ruby" },
   "tpope/vim-eunuch",
   { "tpope/vim-fugitive", cmd = { "Git", "Gstatus", "Gblame", "Gpush", "Gpull" } },
-  { "tpope/vim-projectionist", ft = { "ruby", "javascript", "typescript" } },
-  { "tpope/vim-rails", ft = "ruby" },
+  "tpope/vim-projectionist",
+  "tpope/vim-rails",
   { "tpope/vim-rake", ft = "ruby" },
   { "tpope/vim-rbenv", ft = "ruby" },
   "tpope/vim-repeat",
@@ -124,14 +124,22 @@ require("lazy").setup({
   -- TreeSitter
   {
     "nvim-treesitter/nvim-treesitter",
-    build = ":TSUpdate",
+    branch = "main",
     lazy = false,
+    build = ":TSUpdate",
     config = function()
-      require("nvim-treesitter.configs").setup({
-        highlight = {
-          enable = true,
-          additional_vim_regex_highlighting = false,
-        },
+      require("nvim-treesitter").setup()
+      require("nvim-treesitter").install({
+        "lua", "vim", "vimdoc", "markdown", "markdown_inline",
+        "ruby", "javascript", "typescript", "tsx", "json", "yaml", "bash",
+      })
+      vim.api.nvim_create_autocmd("FileType", {
+        callback = function(args)
+          local ok = pcall(vim.treesitter.start, args.buf)
+          if ok then
+            vim.bo[args.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          end
+        end,
       })
     end,
   },
@@ -204,5 +212,8 @@ require("lazy").setup({
   },
   change_detection = {
     notify = false,
+  },
+  rocks = {
+    enabled = false,
   },
 })

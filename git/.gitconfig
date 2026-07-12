@@ -17,7 +17,6 @@
   email = noah@simplepractice.com
   signingkey = AD73D92D2759B24E
 [init]
-  templatedir = ~/.git_template
 	defaultBranch = main
 [core]
   excludesfile = /Users/noah/.gitignore_global

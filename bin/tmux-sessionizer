@@ -3,7 +3,13 @@
 if [[ $# -eq 1 ]]; then
     selected=$1
 else
-    selected=$(find ~/dev/simplepractice ~/dev/workflow ~/dev/open-source ~/dev/ai ~/dev ~ ~/Documents/ ~/.config/ ~/Downloads -mindepth 1 -maxdepth 1 -type d -not -path '**/hooks' -not -path '**/refs' -not -path '**/objects' -not -path '**/logs' -not -path '**/worktrees' | fzf)
+    selected=$({
+      find ~/dev/work ~/dev ~/Documents/  -mindepth 1 -maxdepth 1 -type d -not -path '**/hooks' -not -path '**/refs' -not -path '**/objects' -not -path '**/logs' -not -path '**/worktrees'
+      echo ~/.config
+      echo ~/qmk_firmware
+      echo ~/.dotfiles
+      echo ~/.hammerspoon
+    } | fzf)
 fi
 
 if [[ -z $selected ]]; then

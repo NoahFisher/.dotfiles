@@ -33,6 +33,7 @@ vim.opt.updatetime = 50
 
 vim.opt.shortmess:append("c")
 vim.opt.colorcolumn = "120"
+vim.opt.cursorline = true
 
 vim.g.mapleader = " "
 vim.g.maplocalleader = "\\"

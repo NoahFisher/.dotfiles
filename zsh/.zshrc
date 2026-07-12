@@ -53,7 +53,7 @@ alias pumalogs='tail -f ~/Library/Logs/puma-dev.log'
 # git aliases
 alias ga='git add -A'
 alias gam='git commit --amend'
-alias gb='git branch -v'
+alias gb='git branch -v'<ScrollWheelUp>
 alias gc='git commit'
 alias gcn='git commit --no-verify'
 alias gco='git checkout'
@@ -211,6 +211,11 @@ function scpjob() {
 
 bd() {
   git diff --name-only --diff-filter=d | xargs bat --diff
+}
+
+spworktree() {
+  git worktree add "$1" "$2"
+  ln -s "$(git rev-parse --show-toplevel)/.projections.json" "$1/.projections.json"
 }
 
 # export NVM_DIR="$HOME/.nvm"
